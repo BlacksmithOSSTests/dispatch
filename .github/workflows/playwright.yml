@@ -15,7 +15,17 @@ env:
 
 jobs:
   end-to-end:
-    runs-on: blacksmith-4vcpu-ubuntu-2204
+    strategy:
+      matrix:
+        runner:
+          [
+            "blacksmith-2vcpu-ubuntu-2204",
+            "blacksmith-4vcpu-ubuntu-2204",
+            "blacksmith-8vcpu-ubuntu-2204",
+            "blacksmith-16vcpu-ubuntu-2204",
+            "ubuntu-latest",
+          ]
+    runs-on: ${{ matrix.runner }}
     services:
       postgres:
         image: postgres
@@ -31,13 +41,36 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
       - name: Set up Python 3.11
+        if: matrix.runner == 'ubuntu-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Set up Python 3.11 (Blacksmith)
+        if: matrix.runner != 'ubuntu-latest'
         uses: useblacksmith/setup-python@v6
         with:
           python-version: 3.11
-      - uses: useblacksmith/setup-node@v5
+      - name: Set up Node.js
+        if: matrix.runner == 'ubuntu-latest'
+        uses: actions/setup-node@v4
         with:
           node-version: 16
-      - uses: useblacksmith/cache@v5
+      - name: Set up Node.js (Blacksmith)
+        if: matrix.runner != 'ubuntu-latest'
+        uses: useblacksmith/setup-node@v5
+        with:
+          node-version: 16
+      - name: Cache pip packages
+        if: matrix.runner == 'ubuntu-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache pip packages (Blacksmith)
+        if: matrix.runner != 'ubuntu-latest'
+        uses: useblacksmith/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -59,9 +92,3 @@ jobs:
         run: dispatch database restore --dump-file data/dispatch-sample-data.dump && dispatch database upgrade
       - name: Run tests
         run: npx playwright test --project=chromium
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
