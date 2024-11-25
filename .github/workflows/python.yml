@@ -9,7 +9,7 @@ jobs:
       COVERAGE_SINGLE: 50
       # Minimum total code coverage
       COVERAGE_TOTAL: 55
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     services:
       postgres:
         image: postgres
@@ -25,10 +25,10 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: 3.11.2
-      - uses: actions/cache@v4
+      - uses: useblacksmith/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
